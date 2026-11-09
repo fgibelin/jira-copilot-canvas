@@ -339,6 +339,21 @@ describe("findSessionId", () => {
     it("says there is none when there is none", () => {
         for (const found of [{}, { structured: null, text: "" }, { structured: {}, text: "done" }, { structured: { id: 5 } }, { structured: { id: "" } }, { text: "[1, 2]" }]) assert.equal(findSessionId(found, OWN), null, JSON.stringify(found));
     });
+
+    it("never takes an id that Copilot has masked for the id of the session", () => {
+        const chat = "Created child chat 'KAN-3: Subtask 2.1' (session_id: ******). Link to it with ghapp://sessions/******.";
+        const project = "Created session 'KAN-3' (id: ******) in project 'Terraink'. The user can switch to it from the sidebar. Link to it with ghapp://sessions/******.";
+        for (const text of [chat, project]) assert.equal(findSessionId({ structured: null, text }, OWN), null, text);
+        for (const field of ["session_id", "sessionId", "project_session_id", "id"]) assert.equal(findSessionId({ structured: { [field]: "******" } }, OWN), null, field);
+        assert.equal(findSessionId({ text: JSON.stringify({ id: "********" }) }, OWN), null);
+        assert.equal(findSessionId({ text: JSON.stringify({ id: "******", session_id: CREATED }) }, OWN), CREATED);
+    });
+
+    it("does not guess another id when the reply says that the id of the session is masked", () => {
+        assert.equal(findSessionId({ text: `Created child chat 'x' (session_id: ******), under ${CREATED}.` }, OWN), null);
+        assert.equal(findSessionId({ text: `Link to it with ghapp://sessions/****** in ${CREATED}` }, OWN), null);
+        assert.equal(findSessionId({ text: `Created 'x' (session_id: ${CREATED}). Stars: ***.` }, OWN), CREATED);
+    });
 });
 
 describe("extractJsonArray", () => {
@@ -514,9 +529,23 @@ describe("the launcher of the Copilot app", () => {
         });
 
         it("does not go anywhere when it cannot tell which session was created", async () => {
-            const { launcher, to } = launcherFor({ ...created, create_session: ok(`Created a session. This one is ${OWN}.`) });
+            const { launcher, to, logs } = launcherFor({ ...created, create_session: ok(`Created a session. This one is ${OWN}.`) });
             assert.deepEqual(await launcher.launch({ target: "chat", ...request }), { sessionId: null, navigated: false, target: "chat" });
             assert.deepEqual(to("navigate_to"), []);
+            assert.deepEqual(logs, [["warning", "The session was created, but Copilot did not say which one it is, so the canvas could not switch to it."]]);
+        });
+
+        it("creates the session once, and does not try to go to it, when Copilot hides its id", async () => {
+            const hidden = "Created child chat 'KAN-7: Fix the login' (session_id: ******). Link to it with ghapp://sessions/******.";
+            const { launcher, to, logs } = launcherFor({ ...created, create_session: ok(hidden) });
+            assert.deepEqual(await launcher.launch({ target: "chat", ...request }), { sessionId: null, navigated: false, target: "chat" });
+            assert.equal(to("create_session").length, 1);
+            assert.deepEqual(to("navigate_to"), []);
+            assert.deepEqual(logs, [["warning", "The session was created, but Copilot did not say which one it is (Copilot hides the ids of sessions from extensions), so the canvas could not switch to it."]]);
+
+            const structured = launcherFor({ ...created, create_session: ok("Session created.", { session_id: "******" }) });
+            assert.deepEqual(await structured.launcher.launch({ target: "same", ...request }), { sessionId: null, navigated: false, target: "same" });
+            assert.deepEqual(structured.to("navigate_to"), []);
         });
 
         it("reports that it could not switch to the new session, without failing", async () => {

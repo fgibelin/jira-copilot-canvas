@@ -242,4 +242,21 @@ describe("app.css", () => {
         const read = new Set(reads.map((entry) => entry.name));
         assert.deepEqual([...declared].filter((name) => !read.has(name)), []);
     });
+
+    // A mistyped class name is not an error anywhere: the element is just left unstyled. These only group or locate elements.
+    const HOOKS = new Set(["backlog", "head-slot", "launch-slot"]);
+
+    test("styles every class that a module gives to an element", () => {
+        const styled = new Set([...code.matchAll(/\.([A-Za-z_][\w-]*)/g)].map((match) => match[1]));
+        const used = Object.entries(modules).flatMap(([name, source]) =>
+            source
+                .split("\n")
+                .filter((line) => !/^\s*(?:\/\/|\/?\*)/.test(line))
+                .flatMap((line) => [...line.matchAll(/\bclass:\s*"([^"]*)"/g)])
+                .flatMap((match) => match[1].split(/\s+/).filter(Boolean).map((className) => ({ className, name }))),
+        );
+        assert.ok(used.length >= 200, `found only ${used.length} classes`);
+        assert.ok(used.some(({ className }) => className === "screen-hint"));
+        assert.deepEqual(used.filter(({ className }) => !styled.has(className) && !HOOKS.has(className)).map(({ className, name }) => `${name}: ${className}`), []);
+    });
 });

@@ -32,6 +32,10 @@ const VIEWS = {
     pages: mountSpacePages,
 };
 const SPACE_TABS = new Set(["summary", "board", "backlog", "issues", "releases", "components", "pages"]);
+// The first request to Atlassian usually answers within a couple of seconds, and the server sends it once more after 10 s.
+// A page that is still empty after this long says so instead of looking stuck.
+const SLOW_BOOT_MS = 6000;
+const SLOW_BOOT_TEXT = "Still connecting to Atlassian… The first request can take a moment.";
 // Changes a mounted view applies to itself; any other change either remounts the view or only concerns the drawer.
 const FILTER_KEYS = ["q", "qMode", "status", "assignee", "type", "sort", "cq", "board"];
 
@@ -48,8 +52,11 @@ function mountKey(view, kind) {
 }
 
 let current = null;
+let slowBoot = null;
 
 function teardown() {
+    clearTimeout(slowBoot);
+    slowBoot = null;
     current?.instance?.dispose?.();
     current = null;
 }
@@ -80,9 +87,17 @@ function showScreen() {
     teardown();
     content.classList.remove("is-board");
     if (state.phase === "boot") {
+        // The status region is on the page long before it has any text, because a screen reader announces text that is added to a live region.
+        const hint = h("p", { class: "screen-hint", role: "status" });
+        slowBoot = setTimeout(() => setChildren(hint, SLOW_BOOT_TEXT), SLOW_BOOT_MS);
         setChildren(
             content,
-            h("div", { class: "screen", "aria-busy": "true" }, h("p", { class: "sr-only" }, "Loading Jira…"), h("div", { class: "list", "aria-hidden": "true" }, skeletonRows(8))),
+            h(
+                "div",
+                { class: "screen" },
+                hint,
+                h("div", { "aria-busy": "true" }, h("p", { class: "sr-only" }, "Loading Jira…"), h("div", { class: "list", "aria-hidden": "true" }, skeletonRows(8))),
+            ),
         );
     } else {
         const fatal = state.fatal ?? { code: "error", message: "Something went wrong." };

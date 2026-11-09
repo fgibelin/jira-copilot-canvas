@@ -123,6 +123,12 @@ function outcome(result) {
 const UUID = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi;
 const ID_FIELDS = ["session_id", "sessionId", "project_session_id", "id"];
 
+// The Copilot app can replace the id of a session with asterisks in what it returns to an extension. A masked id names
+// nothing, so it is never used, and a reply that says its id is masked is never searched for another one to guess.
+const MASKED = /^\*{3,}$/;
+const HIDDEN_ID = /\((?:id|session_id):\s*\*{3,}\)|sessions\/\*{3,}/;
+const usable = (value) => typeof value === "string" && value !== "" && !MASKED.test(value);
+
 function jsonOf(value) {
     if (value && typeof value === "object") return value;
     if (typeof value !== "string") return null;
@@ -137,10 +143,12 @@ export function findSessionId({ structured, text }, ownId) {
     for (const source of [jsonOf(structured), jsonOf(text)]) {
         for (const field of ID_FIELDS) {
             const value = source?.[field] ?? source?.session?.[field];
-            if (typeof value === "string" && value && value !== ownId) return value;
+            if (usable(value) && value !== ownId) return value;
         }
     }
-    return str(text).match(UUID)?.find((id) => id.toLowerCase() !== str(ownId).toLowerCase()) ?? null;
+    const sentence = str(text);
+    if (HIDDEN_ID.test(sentence)) return null;
+    return sentence.match(UUID)?.find((id) => id.toLowerCase() !== str(ownId).toLowerCase()) ?? null;
 }
 
 /** The first complete JSON array in a text, ignoring any prose around it. */
@@ -218,7 +226,10 @@ export function createCopilotLauncher({ getSession, getCwd = () => process.cwd()
         if (!created.ok) throw new AtlassianError("upstream", created.message.trim() || "Copilot could not create the session.");
         const sessionId = findSessionId(created, getSession()?.sessionId);
         let navigated = false;
-        if (sessionId) {
+        if (!sessionId) {
+            const why = HIDDEN_ID.test(created.text) ? " (Copilot hides the ids of sessions from extensions)" : "";
+            log("warning", `The session was created, but Copilot did not say which one it is${why}, so the canvas could not switch to it.`);
+        } else {
             try {
                 navigated = (await run("navigate_to", { id: sessionId }, NAVIGATE_TIMEOUT_MS)).ok;
             } catch (error) {

@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it, test } from "node:test";
-import { AtlassianError, NOT_CONNECTED, adfToMarkdown, bodyText, buildJql, categoryOf, createAtlassian, htmlToText, parseToolResult, patterns, quoteJql, splitOrderBy } from "../jira-copilot-canvas/atlassian.mjs";
+import { AtlassianError, NOT_CONNECTED, READ_TOOLS, adfToMarkdown, bodyText, buildJql, categoryOf, createAtlassian, htmlToText, parseToolResult, patterns, quoteJql, splitOrderBy } from "../jira-copilot-canvas/atlassian.mjs";
 import { ALICE, ALLOWED_OPERATIONS, ALLOWED_TOOLS, BOB, CLOUD_ID, SITE_URL, adf, createMockAtlassian, evaluate, okResult, paragraph, text } from "./harness/mock-atlassian.mjs";
 
 const mocks = [];
 
 function setup(options = {}) {
-    const { now, ...mockOptions } = options;
+    const { now, hedgeMs, ...mockOptions } = options;
     const mock = createMockAtlassian(mockOptions);
     mocks.push(mock);
-    return { mock, atlassian: createAtlassian({ transport: mock.transport, now }) };
+    return { mock, atlassian: createAtlassian({ transport: mock.transport, now, hedgeMs }) };
 }
 
 const rejectsWith = (promise, code, pattern) =>
@@ -952,6 +952,129 @@ describe("failures", () => {
         for (let i = 0; i < 50 && !callsTo(mock, "searchJiraIssuesUsingJql").length; i++) await new Promise((resolve) => setImmediate(resolve));
         t.mock.timers.tick(60_000);
         await rejectsWith(pending, "timeout", /did not answer searchJiraIssuesUsingJql/);
+    });
+});
+
+describe("a request that gets lost", () => {
+    const sentTo = (mock) => callsTo(mock, "getAccessibleAtlassianResources");
+    const flush = async () => {
+        for (let i = 0; i < 20; i++) await new Promise((resolve) => setImmediate(resolve));
+    };
+    const until = async (condition, what) => {
+        for (let i = 0; i < 100 && !condition(); i++) await new Promise((resolve) => setImmediate(resolve));
+        assert.ok(condition(), what);
+    };
+    const deferred = () => {
+        const parts = {};
+        parts.promise = new Promise((resolve, reject) => Object.assign(parts, { resolve, reject }));
+        return parts;
+    };
+    // The site list is answered by the test, request by request; `sent` lists the requests that were made for it.
+    const manual = () => {
+        const mock = createMockAtlassian();
+        mocks.push(mock);
+        const sent = [];
+        const transport = {
+            tools: mock.transport.tools,
+            invoke: (id, args) => {
+                if (!id.endsWith("getAccessibleAtlassianResources")) return mock.transport.invoke(id, args);
+                const request = deferred();
+                request.answer = () => request.resolve(mock.transport.invoke(id, args));
+                sent.push(request);
+                return request.promise;
+            },
+        };
+        return { sent, atlassian: createAtlassian({ transport, hedgeMs: 5_000 }) };
+    };
+
+    it("sends a read once more when nothing has answered it yet, and uses the answer that comes", async (t) => {
+        t.mock.timers.enable({ apis: ["setTimeout"] });
+        const { mock, atlassian } = setup({ hedgeMs: 5_000 });
+        let lost = false;
+        mock.failWith("getAccessibleAtlassianResources", () => {
+            if (lost) return undefined;
+            lost = true;
+            return new Promise(() => {});
+        });
+        const pending = atlassian.listSpaces();
+        await until(() => sentTo(mock).length === 1, "the request was never sent");
+        t.mock.timers.tick(4_999);
+        await flush();
+        assert.equal(sentTo(mock).length, 1, "it was sent again before the delay");
+        t.mock.timers.tick(1);
+        await until(() => sentTo(mock).length === 2, "it was never sent again");
+        assert.equal((await pending).spaces.length, 2);
+        assert.deepEqual(sentTo(mock)[1].args, sentTo(mock)[0].args);
+        assert.equal(sentTo(mock).length, 2);
+    });
+
+    it("sends a read only once when the answer comes in time", async (t) => {
+        t.mock.timers.enable({ apis: ["setTimeout"] });
+        const { mock, atlassian } = setup({ hedgeMs: 5_000 });
+        await atlassian.listSpaces();
+        const sent = mock.calls.length;
+        t.mock.timers.tick(60_000);
+        await flush();
+        assert.equal(mock.calls.length, sent);
+        assert.equal(sentTo(mock).length, 1);
+    });
+
+    it("does not send a read again when it failed before the delay", async (t) => {
+        t.mock.timers.enable({ apis: ["setTimeout"] });
+        const { sent, atlassian } = manual();
+        const pending = atlassian.listSpaces();
+        await until(() => sent.length === 1, "the request was never sent");
+        sent[0].reject(new Error("socket hang up"));
+        await rejectsWith(pending, "upstream", /socket hang up/);
+        t.mock.timers.tick(60_000);
+        await flush();
+        assert.equal(sent.length, 1);
+    });
+
+    it("uses the answer to the second request when the first one fails after it was sent", async (t) => {
+        t.mock.timers.enable({ apis: ["setTimeout"] });
+        const { sent, atlassian } = manual();
+        const pending = atlassian.listSpaces();
+        await until(() => sent.length === 1, "the request was never sent");
+        t.mock.timers.tick(5_000);
+        await until(() => sent.length === 2, "it was never sent again");
+        sent[0].reject(new Error("connection reset"));
+        await flush();
+        sent[1].answer();
+        assert.equal((await pending).spaces.length, 2);
+    });
+
+    it("reports the first failure when both requests fail", async (t) => {
+        t.mock.timers.enable({ apis: ["setTimeout"] });
+        const { sent, atlassian } = manual();
+        const pending = atlassian.listSpaces();
+        await until(() => sent.length === 1, "the request was never sent");
+        t.mock.timers.tick(5_000);
+        await until(() => sent.length === 2, "it was never sent again");
+        sent[0].reject(new Error("first failure"));
+        await flush();
+        sent[1].reject(new Error("second failure"));
+        await rejectsWith(pending, "upstream", /first failure/);
+        assert.equal(sent.length, 2);
+    });
+
+    it("still gives up after the timeout when neither request answers", async (t) => {
+        t.mock.timers.enable({ apis: ["setTimeout"] });
+        const { sent, atlassian } = manual();
+        const pending = atlassian.listSpaces();
+        await until(() => sent.length === 1, "the request was never sent");
+        t.mock.timers.tick(5_000);
+        await until(() => sent.length === 2, "it was never sent again");
+        t.mock.timers.tick(55_000);
+        await rejectsWith(pending, "timeout", /did not answer getAccessibleAtlassianResources/);
+        assert.equal(sent.length, 2);
+    });
+
+    it("only ever applies to the tools that read", () => {
+        assert.deepEqual([...READ_TOOLS].sort(), [...ALLOWED_TOOLS].sort());
+        for (const name of ["createJiraIssue", "editJiraIssue", "transitionJiraIssue", "addOrEditJiraIssueComment", "createConfluenceContent", "updateConfluenceContent", "executeWrite", "executeDestructive"]) {
+            assert.ok(!READ_TOOLS.includes(name), `${name} would be sent twice`);
+        }
     });
 });
 

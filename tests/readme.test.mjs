@@ -264,6 +264,7 @@ describe("the limits in the README", () => {
         const call = plain(cell(limits, "One Atlassian call"));
         assert.ok(call.includes(`${seconds("CALL_TIMEOUT_MS")} s timeout`));
         assert.ok(call.includes(`at most ${constant(service, "MAX_PARALLEL")} in parallel`));
+        assert.ok(call.includes(`a read that has not answered after ${seconds("HEDGE_AFTER_MS")} s is sent once more`));
     });
 
     it("are the limits on the text that goes to the agent", () => {

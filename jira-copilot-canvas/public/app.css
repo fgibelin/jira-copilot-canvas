@@ -962,6 +962,12 @@ textarea.input {
     flex: none;
     max-width: none;
 }
+.screen-hint {
+    color: var(--wi-muted);
+}
+.screen-hint:not(:empty) {
+    padding: 4px var(--gutter) 12px;
+}
 
 /* ---- lists ---------------------------------------------------------------------------------------------------------- */
 .list {

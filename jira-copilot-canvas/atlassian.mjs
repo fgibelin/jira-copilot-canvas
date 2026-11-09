@@ -19,11 +19,14 @@ const TOOLS_TTL_MS = 20_000;
 const SITES_TTL_MS = 5 * 60_000;
 const CACHE_TTL_MS = 30_000;
 const CALL_TIMEOUT_MS = 60_000;
+const HEDGE_AFTER_MS = 10_000;
 const MAX_PARALLEL = 4;
 const PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
 const MAX_PAGES = 5;
 const NO_RETRY = new Set(["auth", "forbidden", "not_found", "rate_limited", "not_connected", "timeout"]);
+// The Atlassian tools that the canvas calls. All of them only read, so a request that gets lost can safely be sent again.
+export const READ_TOOLS = Object.freeze(["getAccessibleAtlassianResources", "atlassianUserInfo", "getJiraIssue", "searchJiraIssuesUsingJql", "listJiraIssueComments", "getConfluenceContent", "searchConfluence", "executeRead", "getVisibleJiraProjects", "getConfluenceSpaces"]);
 const REQUIRED_TOOLS = ["searchJiraIssuesUsingJql", "getJiraIssue"];
 const ISSUE_FIELDS = ["summary", "status", "assignee", "priority", "issuetype", "labels", "duedate", "created", "updated", "parent"];
 const KEY_RE = /^[A-Za-z][A-Za-z0-9_]*-\d+$/;
@@ -78,6 +81,36 @@ function withTimeout(promise, ms, message) {
         timer = setTimeout(() => reject(new AtlassianError("timeout", message)), ms);
     });
     return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * Starts `attempt`. If it has not answered after `delayMs`, starts it once more and takes whichever answers first, so a
+ * request that was lost costs `delayMs` and not the whole timeout. A failure before the delay is final. When both fail,
+ * the first failure is the error.
+ */
+function hedged(attempt, delayMs) {
+    return new Promise((resolve, reject) => {
+        const errors = [];
+        let started = 1;
+        const failed = (error) => {
+            errors.push(error);
+            if (errors.length === started) reject(errors[0]);
+        };
+        const timer = setTimeout(() => {
+            started = 2;
+            attempt().then(resolve, failed);
+        }, delayMs);
+        attempt().then(
+            (value) => {
+                clearTimeout(timer);
+                resolve(value);
+            },
+            (error) => {
+                clearTimeout(timer);
+                failed(error);
+            },
+        );
+    });
 }
 
 // ---- status categories ------------------------------------------------------------------------------------------------------
@@ -519,9 +552,9 @@ const listOf = (data, ...keys) => {
 };
 
 /**
- * @param {{ transport: { tools(): Promise<{id: string, server: string, name: string}[]>, invoke(id: string, args: object): Promise<{ok: boolean, text: string, structured?: unknown, error?: string}> }, now?: () => number }} deps
+ * @param {{ transport: { tools(): Promise<{id: string, server: string, name: string}[]>, invoke(id: string, args: object): Promise<{ok: boolean, text: string, structured?: unknown, error?: string}> }, now?: () => number, hedgeMs?: number }} deps
  */
-export function createAtlassian({ transport, now = Date.now }) {
+export function createAtlassian({ transport, now = Date.now, hedgeMs = HEDGE_AFTER_MS }) {
     const limit = createLimiter(MAX_PARALLEL);
     let toolbox = null;
     let siteCache = null;
@@ -573,8 +606,9 @@ export function createAtlassian({ transport, now = Date.now }) {
         const id = box.byName.get(name);
         if (!id) throw new AtlassianError("unsupported", `The Atlassian MCP server does not provide ${name}.`);
         let result;
+        const attempt = () => Promise.resolve().then(() => transport.invoke(id, args));
         try {
-            result = await limit(() => withTimeout(Promise.resolve(transport.invoke(id, args)), CALL_TIMEOUT_MS, `Atlassian did not answer ${name} in time.`));
+            result = await limit(() => withTimeout(READ_TOOLS.includes(name) ? hedged(attempt, hedgeMs) : attempt(), CALL_TIMEOUT_MS, `Atlassian did not answer ${name} in time.`));
         } catch (error) {
             if (error instanceof AtlassianError) throw error;
             throw new AtlassianError("upstream", `Calling ${name} failed: ${str(error?.message ?? error)}`);

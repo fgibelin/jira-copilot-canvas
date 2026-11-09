@@ -131,7 +131,7 @@ Open a work item and choose **New Copilot session**. An inline panel (not a dial
 
 An optional note (up to 2 000 characters) is added to the prompt. The canvas never starts a session in autopilot.
 
-**Copilot App.** *Start in* offers **This session's project** (a new worktree of the git root of the session's working directory), **every repository configured in the app**, and **Chat** (no repository). The canvas preselects the place you started last, or this session's project; otherwise you choose, so nothing starts in a repository by accident. The new session is named `KEY: summary`, kept to 40 characters, is detached from the current one, and opens as soon as it exists.
+**Copilot App.** *Start in* offers **This session's project** (a new worktree of the git root of the session's working directory), **every repository configured in the app**, and **Chat** (no repository). The canvas preselects the place you started last, or this session's project; otherwise you choose, so nothing starts in a repository by accident. The new session is named `KEY: summary`, kept to 40 characters, and is detached from the current one. The canvas switches to it when Copilot tells it which session it created. The Copilot App this was tested with does not: it hides the ids of new sessions from extensions. The session is still created and starts working, and the canvas says *Find it in your session list*; open it from the sidebar.
 
 **VS Code.** The only target is **New chat in VS Code**. The canvas opens a new chat (in Agent mode where VS Code allows it) with the prompt filled in and **never sends it**: you read it and press Enter. If the chat commands are not available, the prompt is copied to the clipboard instead.
 
@@ -183,7 +183,7 @@ In VS Code the tools need a trusted workspace and an open panel; without one the
 | Page size | 50 work items, up to 100 |
 | Pages fetched when listing spaces and boards | at most 5 |
 | Cache | Jira and Confluence data 30 s, the tool list 20 s, the site list 5 min; **Refresh** clears it |
-| One Atlassian call | 60 s timeout, at most 4 in parallel |
+| One Atlassian call | 60 s timeout, at most 4 in parallel; a read that has not answered after 10 s is sent once more, and the first answer wins |
 | Text returned to the agent | description 30 000 characters; 30 comments of 4 000 characters each; Confluence page 40 000 characters |
 
 The panel's state (space, section, filters, open work item) lives in memory and is dropped when the canvas closes.
@@ -193,9 +193,11 @@ The panel's state (space, section, filters, open work item) lives in memory and 
 | You see | Why | What to do |
 | --- | --- | --- |
 | *The Atlassian MCP server is not available in this session.* | The server is not connected, not signed in, or does not offer `searchJiraIssuesUsingJql` and `getJiraIssue`. | Connect it, sign in, reopen the canvas. Run `diagnose` to see what the canvas found. |
+| *Still connecting to Atlassian…* | The first request to Atlassian has not answered yet. A read that stays unanswered is sent once more after 10 s, and any call gives up after 60 s. | Wait a few seconds. If it ends in an error, choose **Try again**. |
 | *Boards need the layered Atlassian MCP toolset (executeRead).* | The server offers the classic toolset only. | Work items, summaries and Confluence still work. Boards, releases and components need the layered toolset. |
 | *The JQL filter has unbalanced parentheses or quotes.* | The filter is wrapped in parentheses and combined with the space, so an open bracket or quote would change its meaning. | Balance them. |
 | *This board has no separate backlog.* | Kanban and team-managed boards have none. | Use **Board** or **Work items**. |
+| *Find it in your session list.* (the notice after you start a session) | Copilot created the session but did not tell the canvas which one it is, so the canvas could not switch to it. The Copilot App hides the ids of new sessions from extensions. | Open the session from your session list. It is named after the work item. |
 | *Trust this workspace before opening the Jira canvas.* (VS Code) | Workspace Trust is off for this folder. | Trust the folder. |
 | *Live updates are off. Refresh to see changes.* | The panel lost its connection to the canvas server. | Reopen the canvas. |
 
