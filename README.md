@@ -163,7 +163,7 @@ The same 17 tools are canvas actions in the Copilot App and `jira_canvas_<name>`
 | `get_confluence_page` | A page as Markdown. |
 | `search_confluence` | Search Confluence pages. |
 | `refresh` | Clear the cache and reload. |
-| `diagnose` | Which MCP server and tools the canvas found, whether the toolset is layered or classic, the sites, and the signed-in user. |
+| `diagnose` | Which MCP server and tools the canvas found, whether the toolset is layered or classic, the sites, and the signed-in account (its Atlassian account ID, because the server does not report a name). |
 
 In VS Code the tools need a trusted workspace and an open panel; without one they answer *"Open the canvas first: run 'Jira: Open Jira Canvas' from the Command Palette."*
 
@@ -203,7 +203,7 @@ The panel's state (space, section, filters, open work item) lives in memory and 
 
 `npm run test:vscode` runs its checks in a real, isolated VS Code (1.145.0 when last run): the extension activates with other extensions disabled, all 17 tools are registered, **Jira: Open Jira Canvas** opens a real webview whose page loads and completes its handshake under the webview's Content Security Policy, tools can be invoked and their errors reach the caller, and the chat commands used to prefill a new chat exist.
 
-Not verified yet: how VS Code names the tools of a connected Atlassian MCP server (the adapter looks for `mcp_<server>_<tool>`), and remote windows. If the canvas says the Atlassian MCP server is unavailable while it is connected, run `#jira_diagnose` in Copilot Chat and open an issue with its output.
+Not verified yet: how VS Code names the tools of a connected Atlassian MCP server (the adapter looks for `mcp_<server>_<tool>`), and remote windows. If the canvas says the Atlassian MCP server is unavailable while it is connected, run `#jira_diagnose` in Copilot Chat and open an issue with its output. The output names your site and your Atlassian account ID, so remove them before you share it.
 
 ## Development
 

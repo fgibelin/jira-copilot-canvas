@@ -376,7 +376,7 @@ describe("data", () => {
 
     it("runs the diagnostics", async () => {
         const report = await setup().workbench.diagnose();
-        assert.equal(report.signedInAs, "Alice Martin");
+        assert.equal(report.signedInAs, ALICE.accountId);
         assert.equal(report.sites[0].cloudId, CLOUD_ID);
     });
 });

@@ -968,7 +968,8 @@ export function createAtlassian({ transport, now = Date.now }) {
             if (box.byName.has("atlassianUserInfo")) {
                 const info = await call("atlassianUserInfo", {}).catch((error) => ({ data: { error: error.message } }));
                 const user = isObject(info.data) ? info.data : {};
-                report.signedInAs = str(user.name ?? user.displayName ?? user.email ?? user.error ?? "") || null;
+                // The real server answers with the account ID alone; a name is used when a server offers one.
+                report.signedInAs = str(user.displayName ?? user.name ?? user.email ?? user.accountId ?? user.account_id ?? user.error ?? "") || null;
             }
         } catch (error) {
             report.error = { code: error.code ?? "error", message: error.message };

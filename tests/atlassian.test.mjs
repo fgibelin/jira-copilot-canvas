@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it, test } from "node:test";
 import { AtlassianError, NOT_CONNECTED, adfToMarkdown, bodyText, buildJql, categoryOf, createAtlassian, htmlToText, parseToolResult, patterns, quoteJql, splitOrderBy } from "../jira-copilot-canvas/atlassian.mjs";
-import { ALICE, ALLOWED_OPERATIONS, ALLOWED_TOOLS, BOB, CLOUD_ID, SITE_URL, adf, createMockAtlassian, evaluate, paragraph, text } from "./harness/mock-atlassian.mjs";
+import { ALICE, ALLOWED_OPERATIONS, ALLOWED_TOOLS, BOB, CLOUD_ID, SITE_URL, adf, createMockAtlassian, evaluate, okResult, paragraph, text } from "./harness/mock-atlassian.mjs";
 
 const mocks = [];
 
@@ -989,8 +989,19 @@ describe("diagnose", () => {
         assert.deepEqual(report.tools, [...report.tools].sort());
         assert.deepEqual(report.sites, [{ cloudId: CLOUD_ID, url: SITE_URL, name: "acme", jira: true, confluence: true }]);
         assert.equal(report.site, SITE_URL);
-        assert.equal(report.signedInAs, "Alice Martin");
+        assert.equal(report.signedInAs, ALICE.accountId);
         assert.equal("error" in report, false);
+    });
+
+    it("names the signed-in user when the server says who it is, and otherwise gives the account ID", async () => {
+        const mock = createMockAtlassian();
+        mocks.push(mock);
+        const answering = (answer) => createAtlassian({ transport: { tools: mock.transport.tools, invoke: (id, args) => (id.endsWith("atlassianUserInfo") ? answer : mock.transport.invoke(id, args)) } });
+        const info = (user) => okResult(user);
+        assert.equal((await answering(info({ accountId: "712020:abc", displayName: "Alice Martin" })).diagnose()).signedInAs, "Alice Martin");
+        assert.equal((await answering(info({ account_id: "712020:abc", name: "Alice Martin" })).diagnose()).signedInAs, "Alice Martin");
+        assert.equal((await answering(info({ account_id: "712020:abc" })).diagnose()).signedInAs, "712020:abc");
+        assert.equal((await answering(info({})).diagnose()).signedInAs, null);
     });
 
     it("reports the problem instead of throwing when the sites cannot be read", async () => {

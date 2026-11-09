@@ -815,7 +815,7 @@ describe("refresh and diagnose", () => {
         for (const tool of ["getJiraIssue", "searchJiraIssuesUsingJql", "executeRead", "getAccessibleAtlassianResources"]) assert.ok(report.tools.includes(tool), tool);
         assert.deepEqual(report.sites, [{ cloudId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", url: "https://acme.atlassian.net", name: "acme", jira: true, confluence: true }]);
         assert.equal(report.site, "https://acme.atlassian.net");
-        assert.equal(report.signedInAs, "Alice Martin");
+        assert.equal(report.signedInAs, ALICE.accountId);
     });
 
     it("explains in the report what stands in the way, instead of failing", async () => {

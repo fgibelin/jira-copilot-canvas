@@ -275,7 +275,7 @@ export function createMockAtlassian({ layered = true, sites, idPrefix = "mock-",
         getAccessibleAtlassianResources: () => ok(resources),
         getVisibleJiraProjects: (args) => ok(valuesPage(projects(), { maxResults: args.maxResults })),
         getConfluenceSpaces: () => ok({ results: data.confluenceSpaces, _links: {} }),
-        atlassianUserInfo: () => ok({ account_id: state.user.accountId, name: state.user.displayName, email: "alice@example.com" }),
+        atlassianUserInfo: () => ok({ accountId: state.user.accountId }),
         searchJiraIssuesUsingJql: (args) => {
             const jql = args.jql ?? "";
             const unknown = [...jql.matchAll(/project = "([^"\\]*)"/g)].map((match) => match[1]).find((key) => !data.projects.some((project) => project.key === key));
