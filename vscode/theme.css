@@ -1,0 +1,28 @@
+/* Maps the VS Code theme onto the host variables that the canvas stylesheet reads. */
+:root {
+    --background-color-default: var(--vscode-editor-background);
+    --text-color-default: var(--vscode-editor-foreground);
+    --text-color-muted: var(--vscode-descriptionForeground);
+    --border-color-default: var(--vscode-widget-border, var(--vscode-panel-border));
+    --color-focus-outline: var(--vscode-focusBorder);
+    --font-sans: var(--vscode-font-family);
+    --font-mono: var(--vscode-editor-font-family);
+    --text-body-medium: var(--vscode-font-size, 13px);
+    --leading-body-medium: 1.5;
+    --true-color-blue: var(--vscode-textLink-foreground);
+    --true-color-green: var(--vscode-charts-green);
+    --true-color-purple: var(--vscode-charts-purple);
+    --true-color-red: var(--vscode-errorForeground);
+    --true-color-yellow: var(--vscode-editorWarning-foreground);
+    --color-white: var(--vscode-button-foreground);
+}
+
+body.vscode-light,
+body.vscode-high-contrast-light {
+    color-scheme: light;
+}
+
+body.vscode-dark,
+body.vscode-high-contrast {
+    color-scheme: dark;
+}
