@@ -767,7 +767,11 @@ export function createAtlassian({ transport, now = Date.now }) {
     async function searchIssues({ site: wanted, space, cursor, limit: size, ...filter } = {}) {
         const site = await siteFor(wanted);
         const jql = buildJql({ ...filter, space: requireSpace(space) });
-        const page = await searchRaw(site, jql, { cursor, limit: size });
+        const typed = filter.qMode === "jql" && str(filter.q).trim() !== "";
+        const page = await searchRaw(site, jql, { cursor, limit: size }).catch((error) => {
+            // Jira words a mistyped field or value as "does not exist", which would read as a missing space.
+            throw typed && error instanceof AtlassianError && error.code === "not_found" ? new AtlassianError("invalid", error.message) : error;
+        });
         return { site, jql, ...page };
     }
 

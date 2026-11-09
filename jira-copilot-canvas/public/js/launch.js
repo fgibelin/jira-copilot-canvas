@@ -63,26 +63,32 @@ export function mountLaunch(container, { key, onClose }) {
 
     const field = (...content) => setChildren(targetSlot, h("span", { class: "field-label" }, "Start in"), ...content);
 
+    const canStart = () => !pending && targets !== null && (!select || select.value !== "");
+
     function renderTargets(list, last) {
         targets = list;
+        select = null;
         if (list.length === 1) {
             field(h("p", { class: "launch-target" }, h("strong", {}, list[0].label), list[0].detail ? h("span", { class: "muted" }, ` · ${list[0].detail}`) : null));
         } else {
             const hint = h("p", { class: "field-hint muted" });
+            // Where a session starts is the user's call unless the answer is obvious: where the last one went, or this session's own project.
+            const preferred = list.find((item) => item.id === last) ?? list.find((item) => item.kind === "same");
             select = selectInput({
                 label: "Start in",
-                options: list.map((item) => ({ value: item.id, label: item.label })),
-                value: list.some((item) => item.id === last) ? last : list[0].id,
-                onchange: () => showHint(),
+                options: [{ value: "", label: "Choose where to start…" }, ...list.map((item) => ({ value: item.id, label: item.label }))],
+                value: preferred?.id ?? "",
+                onchange: () => refresh(),
             });
             select.id = `${id}-target`;
-            const showHint = () => {
+            const refresh = () => {
                 hint.textContent = list.find((item) => item.id === select.value)?.detail ?? "";
+                start.disabled = !canStart();
             };
-            showHint();
+            refresh();
             field(select, hint);
         }
-        start.disabled = pending;
+        start.disabled = !canStart();
     }
 
     async function loadTargets() {
@@ -100,17 +106,17 @@ export function mountLaunch(container, { key, onClose }) {
 
     function setPending(on) {
         pending = on;
-        start.disabled = on || !targets;
+        start.disabled = !canStart();
         start.textContent = on ? "Starting…" : "Start session";
         form.setAttribute("aria-busy", String(on));
     }
 
     async function submit(event) {
         event.preventDefault();
-        if (pending || !targets) return;
+        const target = select ? select.value : targets?.[0]?.id;
+        if (pending || !target) return;
         errorLine.hidden = true;
         const intent = form.querySelector("input[type=radio]:checked")?.value ?? "context";
-        const target = select ? select.value : targets[0].id;
         setPending(true);
         try {
             const result = await api.openSession(key, { target, intent, notes: notes.value.trim() });

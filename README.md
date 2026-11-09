@@ -131,7 +131,7 @@ Open a work item and choose **New Copilot session**. An inline panel (not a dial
 
 An optional note (up to 2 000 characters) is added to the prompt. The canvas never starts a session in autopilot.
 
-**Copilot App.** *Start in* offers **This session's project** (a new worktree of the git root of the session's working directory), **every repository configured in the app**, and **Chat** (no repository). The new session is named `KEY: summary`, kept to 40 characters, is detached from the current one, and opens as soon as it exists.
+**Copilot App.** *Start in* offers **This session's project** (a new worktree of the git root of the session's working directory), **every repository configured in the app**, and **Chat** (no repository). The canvas preselects the place you started last, or this session's project; otherwise you choose, so nothing starts in a repository by accident. The new session is named `KEY: summary`, kept to 40 characters, is detached from the current one, and opens as soon as it exists.
 
 **VS Code.** The only target is **New chat in VS Code**. The canvas opens a new chat (in Agent mode where VS Code allows it) with the prompt filled in and **never sends it**: you read it and press Enter. If the chat commands are not available, the prompt is copied to the clipboard instead.
 

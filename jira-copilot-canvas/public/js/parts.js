@@ -29,13 +29,14 @@ const ERROR_TITLES = {
     auth: "Sign in to Atlassian again",
     forbidden: "No access to this content",
     not_found: "Not found",
+    invalid: "Check your search",
     unsupported: "Not available here",
     rate_limited: "Atlassian is rate limiting requests",
     outdated_server: "The canvas needs a restart",
     no_token: "Reopen the canvas",
     network: "Lost connection to the canvas",
 };
-const NO_RETRY = new Set(["outdated_server", "no_token"]);
+const NO_RETRY = new Set(["outdated_server", "no_token", "invalid"]);
 
 /** The server's message already says what to do (for example how to connect Atlassian), so it is shown as is. */
 export function errorBox(error, retry, title) {

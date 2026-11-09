@@ -621,6 +621,16 @@ describe("issues", () => {
         await rejectsWith(atlassian.searchIssues({ space: "ZZZ" }), "not_found", /does not exist/);
     });
 
+    it("blames a mistyped JQL filter on the query, not on a missing space", async () => {
+        const { mock, atlassian } = setup();
+        mock.failWith("searchJiraIssuesUsingJql", { statusCode: 400, message: "JQL validation failed: Field 'statuss' does not exist or you do not have permission to view it." });
+        await rejectsWith(atlassian.searchIssues({ space: "KAN", q: "statuss = Done", qMode: "jql" }), "invalid", /Field 'statuss' does not exist/);
+        await rejectsWith(atlassian.searchIssues({ space: "KAN", q: "statuss = Done", qMode: "text" }), "not_found", /does not exist/);
+        await rejectsWith(atlassian.searchIssues({ space: "KAN", q: "   ", qMode: "jql" }), "not_found", /does not exist/);
+        mock.failWith("searchJiraIssuesUsingJql", { statusCode: 429, message: "slow down" });
+        await rejectsWith(atlassian.searchIssues({ space: "KAN", q: "status = Done", qMode: "jql" }), "rate_limited", /slow down/);
+    });
+
     it("keeps a search inside its space", async () => {
         const { atlassian } = setup();
         const { items } = await atlassian.searchIssues({ space: "KAN", q: 'x" OR project = "SAM1' });

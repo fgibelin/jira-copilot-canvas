@@ -1093,7 +1093,7 @@ textarea.input {
     white-space: nowrap;
 }
 .row-updated {
-    min-width: 5ch;
+    min-width: 12ch;
     text-align: right;
     white-space: nowrap;
 }
