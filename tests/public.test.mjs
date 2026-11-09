@@ -182,6 +182,8 @@ describe("index.html", () => {
 
 describe("app.css", () => {
     const code = css.replace(/\/\*[\s\S]*?\*\//g, "").replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, '""');
+    const bare = css.replace(/\/\*[\s\S]*?\*\//g, "");
+    const rulesOf = (text) => [...text.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({ selectors: match[1].split(",").map((selector) => selector.trim().replace(/\s+/g, " ")), body: match[2] }));
     const declarations = (text) => [...text.matchAll(/(?:^|[\s{;])(--[\w-]+)\s*:/g)].map((match) => match[1]);
     const declared = new Set(declarations(code));
     const fromScript = new Set(Object.values(modules).flatMap((source) => [...source.matchAll(/["'`](--[\w-]+)/g)].map((match) => match[1])));
@@ -204,6 +206,21 @@ describe("app.css", () => {
 
     test("stops animating when asked to", () => {
         assert.match(code, /@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)/);
+    });
+
+    // An override only wins when it is as specific as the rule it silences, so each animated selector must be repeated verbatim.
+    test("silences every animated selector under prefers-reduced-motion", () => {
+        const start = /@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)\s*\{/.exec(bare);
+        assert.ok(start, "no prefers-reduced-motion block");
+        const inner = start.index + start[0].length;
+        let end = inner;
+        for (let depth = 1; depth > 0 && end < bare.length; end += 1) depth += bare[end] === "{" ? 1 : bare[end] === "}" ? -1 : 0;
+        const silenced = new Set(rulesOf(bare.slice(inner, end)).filter((rule) => /\banimation\s*:\s*none\b/.test(rule.body)).flatMap((rule) => rule.selectors));
+        const animated = rulesOf(bare.slice(0, start.index) + bare.slice(end))
+            .filter((rule) => /(?:^|[\s;])animation\s*:\s*(?!none\b)/.test(rule.body))
+            .flatMap((rule) => rule.selectors);
+        assert.ok(animated.length >= 5, `found only: ${animated.join(" | ")}`);
+        assert.deepEqual(animated.filter((selector) => !silenced.has(selector)), []);
     });
 
     test("loads nothing over the network", () => {

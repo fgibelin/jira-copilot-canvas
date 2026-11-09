@@ -405,6 +405,7 @@ code {
     color: var(--wi-link);
     font-size: var(--fs-sm);
     text-decoration: none;
+    white-space: nowrap;
 }
 .ext:hover {
     text-decoration: underline;
@@ -1979,7 +1980,8 @@ h2.md-h {
 }
 @media (prefers-reduced-motion: reduce) {
     .sk,
-    .live-dot,
+    .live-dot[data-status="connecting"],
+    .live-dot[data-status="reconnecting"],
     .toast,
     .detail {
         animation: none;
