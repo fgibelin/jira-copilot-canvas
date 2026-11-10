@@ -298,6 +298,12 @@ describe("htmlToText and bodyText", () => {
         assert.equal(htmlToText("<ul><li>a</li><li>b</li></ul>"), "- a\n\n- b");
     });
 
+    it("does not restore script markup while decoding entities or overlapping tags", () => {
+        assert.equal(htmlToText("&lt;script&gt;alert(1)&lt;/script&gt;"), "");
+        assert.equal(htmlToText("&lt;script&gt;&lt;script&gt;alert(1)&lt;/script&gt;&lt;/script&gt;"), "");
+        assert.doesNotMatch(htmlToText("&lt;scr<script&gt;ipt&gt;alert(1)&lt;/script&gt;"), /<\s*script\b/i);
+    });
+
     it("reads a description whatever its form", () => {
         assert.equal(bodyText("plain *text*"), "plain *text*");
         assert.equal(bodyText(JSON.stringify(adf(paragraph(text("from adf"))))), "from adf");

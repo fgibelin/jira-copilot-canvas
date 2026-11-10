@@ -344,16 +344,25 @@ export const adfToMarkdown = (doc) => adfBlocks(isObject(doc) && doc.type === "d
 
 const ENTITIES = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&nbsp;": " " };
 
+function stripScriptAndStyle(text) {
+    let previous;
+    do {
+        previous = text;
+        text = text
+            .replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, "")
+            .replace(/<\/?(script|style)\b[^>]*>/gi, "");
+    } while (text !== previous);
+    return text;
+}
+
 export function htmlToText(html) {
-    return str(html)
-        .replace(/<(script|style)[\s\S]*?<\/\1>/gi, "")
+    const text = stripScriptAndStyle(str(html))
         .replace(/<br\s*\/?>/gi, "\n")
         .replace(/<\/(p|div|h[1-6]|li|tr|pre|blockquote)>/gi, "\n\n")
         .replace(/<li[^>]*>/gi, "- ")
         .replace(/<[^>]+>/g, "")
-        .replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, (entity) => ENTITIES[entity])
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
+        .replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, (entity) => ENTITIES[entity]);
+    return stripScriptAndStyle(text).replace(/\n{3,}/g, "\n\n").trim();
 }
 
 /** Text of a description or a comment, whatever form the server returned it in. */
