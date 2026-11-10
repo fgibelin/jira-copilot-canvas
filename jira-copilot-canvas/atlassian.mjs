@@ -276,7 +276,7 @@ function adfInline(nodes) {
 }
 
 function adfTable(table) {
-    const rows = arr(table.content).map((row) => arr(row.content).map((cell) => adfBlocks(cell.content).replace(/\n+/g, " ").replace(/\|/g, "\\|")));
+    const rows = arr(table.content).map((row) => arr(row.content).map((cell) => adfBlocks(cell.content).replace(/\n+/g, " ").replace(/\\/g, "\\\\").replace(/\|/g, "\\|")));
     if (!rows.length) return "";
     const width = Math.max(...rows.map((row) => row.length));
     const pad = (row) => Array.from({ length: width }, (_, i) => row[i] ?? "");
