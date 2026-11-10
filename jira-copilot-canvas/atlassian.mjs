@@ -346,7 +346,7 @@ const ENTITIES = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;
 
 export function htmlToText(html) {
     return str(html)
-        .replace(/<(script|style)[\s\S]*?<\/\1>/gi, "")
+        .replace(/<(script|style)\b[^>]*>[\s\S]*?(?:<\/\1\s*>|$)/gi, "")
         .replace(/<br\s*\/?>/gi, "\n")
         .replace(/<\/(p|div|h[1-6]|li|tr|pre|blockquote)>/gi, "\n\n")
         .replace(/<li[^>]*>/gi, "- ")

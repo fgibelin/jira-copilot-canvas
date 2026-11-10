@@ -298,6 +298,11 @@ describe("htmlToText and bodyText", () => {
         assert.equal(htmlToText("<ul><li>a</li><li>b</li></ul>"), "- a\n\n- b");
     });
 
+    it("removes nested script and style blocks through the end when unclosed", () => {
+        assert.equal(htmlToText("<script>outer<script>nested</script><script>active"), "");
+        assert.equal(htmlToText("<style>outer<style>nested</style><style>active"), "");
+    });
+
     it("reads a description whatever its form", () => {
         assert.equal(bodyText("plain *text*"), "plain *text*");
         assert.equal(bodyText(JSON.stringify(adf(paragraph(text("from adf"))))), "from adf");
