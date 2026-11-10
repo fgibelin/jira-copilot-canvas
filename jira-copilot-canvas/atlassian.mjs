@@ -344,20 +344,23 @@ export const adfToMarkdown = (doc) => adfBlocks(isObject(doc) && doc.type === "d
 
 const ENTITIES = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&nbsp;": " " };
 
-export function htmlToText(html) {
-    let text = str(html);
+const stripScriptsAndStyles = (html) => {
     let previous;
     do {
-        previous = text;
-        text = text.replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, "");
-    } while (text !== previous);
+        previous = html;
+        html = html.replace(/<(script|style)\b[^>]*(?:>[\s\S]*?(?:<\/\1\s*>|$)|$)/gi, "");
+    } while (html !== previous);
+    return html;
+};
 
-    return text
+export function htmlToText(html) {
+    const text = stripScriptsAndStyles(str(html))
         .replace(/<br\s*\/?>/gi, "\n")
         .replace(/<\/(p|div|h[1-6]|li|tr|pre|blockquote)>/gi, "\n\n")
         .replace(/<li[^>]*>/gi, "- ")
         .replace(/<[^>]+>/g, "")
-        .replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, (entity) => ENTITIES[entity])
+        .replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, (entity) => ENTITIES[entity]);
+    return stripScriptsAndStyles(text)
         .replace(/\n{3,}/g, "\n\n")
         .trim();
 }
