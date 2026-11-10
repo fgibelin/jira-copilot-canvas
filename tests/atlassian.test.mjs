@@ -277,6 +277,11 @@ describe("adfToMarkdown", () => {
         assert.equal(adfToMarkdown(adf(table)), "| A | B |\n| --- | --- |\n| 1 | 2 \\| x |");
     });
 
+    it("escapes backslashes before pipes in table cells", () => {
+        const table = { type: "table", content: [{ type: "tableRow", content: [{ type: "tableCell", content: [paragraph(text("a\\|b | c"))] }] }] };
+        assert.equal(adfToMarkdown(adf(table)), "| a\\\\\\|b \\| c |\n| --- |");
+    });
+
     it("converts inline nodes", () => {
         const timestamp = Date.UTC(2026, 10, 9);
         const doc = adf(paragraph({ type: "mention", attrs: { text: "@Alice" } }, text(" "), { type: "status", attrs: { text: "DONE" } }, text(" "), { type: "date", attrs: { timestamp: String(timestamp) } }, { type: "hardBreak" }, { type: "inlineCard", attrs: { url: "https://example.com/c" } }, { type: "emoji", attrs: { text: ":)" } }));
@@ -298,6 +303,10 @@ describe("htmlToText and bodyText", () => {
         assert.equal(htmlToText("&lt;script&gt;alert(1)"), "");
         assert.equal(htmlToText("one<br>two<br/>three"), "one\ntwo\nthree");
         assert.equal(htmlToText("<ul><li>a</li><li>b</li></ul>"), "- a\n\n- b");
+    });
+
+    it("removes script markup reconstructed by overlapping tags", () => {
+        assert.equal(htmlToText("<scr<script>ignored</script>ipt>alert(1)</script>"), "");
     });
 
     it("reads a description whatever its form", () => {

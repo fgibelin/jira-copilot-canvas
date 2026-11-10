@@ -276,7 +276,7 @@ function adfInline(nodes) {
 }
 
 function adfTable(table) {
-    const rows = arr(table.content).map((row) => arr(row.content).map((cell) => adfBlocks(cell.content).replace(/\n+/g, " ").replace(/\|/g, "\\|")));
+    const rows = arr(table.content).map((row) => arr(row.content).map((cell) => adfBlocks(cell.content).replace(/\n+/g, " ").replace(/\\/g, "\\\\").replace(/\|/g, "\\|")));
     if (!rows.length) return "";
     const width = Math.max(...rows.map((row) => row.length));
     const pad = (row) => Array.from({ length: width }, (_, i) => row[i] ?? "");
@@ -344,7 +344,14 @@ export const adfToMarkdown = (doc) => adfBlocks(isObject(doc) && doc.type === "d
 
 const ENTITIES = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&nbsp;": " " };
 
-const stripScriptsAndStyles = (html) => html.replace(/<(script|style)\b[^>]*(?:>[\s\S]*?(?:<\/\1\s*>|$)|$)/gi, "");
+const stripScriptsAndStyles = (html) => {
+    let previous;
+    do {
+        previous = html;
+        html = html.replace(/<(script|style)\b[^>]*(?:>[\s\S]*?(?:<\/\1\s*>|$)|$)/gi, "");
+    } while (html !== previous);
+    return html;
+};
 
 export function htmlToText(html) {
     const text = stripScriptsAndStyles(str(html))
