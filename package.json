@@ -2,7 +2,7 @@
   "name": "jira-copilot-canvas",
   "displayName": "Jira & Confluence Canvas",
   "description": "Browse Jira boards, the work items and sections of a space, and Confluence pages through the Atlassian MCP server, and start a Copilot session from any work item.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "fgibelin",
   "license": "MIT",
   "type": "module",
