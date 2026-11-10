@@ -149,7 +149,8 @@ describe("the page of the webview", () => {
     });
 
     it("has no script of its own, which the policy would refuse to run", async () => {
-        const tags = (await render()).match(/<script\b[^>]*>/g) ?? [];
+        const html = (await render()).replace(/<\/?script\b/gi, (tag) => tag.toUpperCase());
+        const tags = html.match(/<script\b[^>]*>/gi) ?? [];
         assert.ok(tags.length > 0);
         for (const tag of tags) assert.match(tag, /\ssrc="/, tag);
     });
