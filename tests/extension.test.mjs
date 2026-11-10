@@ -158,7 +158,7 @@ describe("what the extension declares", () => {
         assert.deepEqual(Object.keys(captured.config), ["canvases"]);
         assert.equal(captured.config.canvases.length, 1);
         assert.equal(canvas.id, "jira-copilot-canvas");
-        assert.equal(canvas.displayName, "Jira & Confluence");
+        assert.equal(canvas.displayName, "Jira and Confluence");
         assert.match(canvas.description, /^[^\n]{40,250}$/);
     });
 

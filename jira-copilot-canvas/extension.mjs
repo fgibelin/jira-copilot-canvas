@@ -71,7 +71,7 @@ const asCanvasError = (error) => (error instanceof AtlassianError ? new CanvasEr
 
 const canvas = createCanvas({
     id: "jira-copilot-canvas",
-    displayName: "Jira & Confluence",
+    displayName: "Jira and Confluence",
     description: "Browse Jira boards, the issues and the sections of a Jira space, and Confluence pages, through the Atlassian MCP server. Open any work item as a new Copilot session.",
     inputSchema: {
         type: "object",

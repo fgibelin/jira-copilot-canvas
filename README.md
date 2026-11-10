@@ -35,7 +35,7 @@ Without the first item, the canvas shows *"The Atlassian MCP server is not avail
 
 | Host | What you install | What you get |
 | --- | --- | --- |
-| Copilot App | the `jira-copilot-canvas/` folder | the **Jira & Confluence** canvas and its 17 actions |
+| Copilot App | the `jira-copilot-canvas/` folder | the **Jira and Confluence** canvas and its 17 actions |
 | VS Code | `jira-copilot-canvas.vsix` | the command **Jira: Open Jira Canvas** and 17 tools for Copilot Chat |
 
 ### Copilot App
