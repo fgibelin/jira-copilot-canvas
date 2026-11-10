@@ -345,8 +345,14 @@ export const adfToMarkdown = (doc) => adfBlocks(isObject(doc) && doc.type === "d
 const ENTITIES = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&nbsp;": " " };
 
 export function htmlToText(html) {
-    return str(html)
-        .replace(/<(script|style)[\s\S]*?<\/\1>/gi, "")
+    let text = str(html);
+    let previous;
+    do {
+        previous = text;
+        text = text.replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, "");
+    } while (text !== previous);
+
+    return text
         .replace(/<br\s*\/?>/gi, "\n")
         .replace(/<\/(p|div|h[1-6]|li|tr|pre|blockquote)>/gi, "\n\n")
         .replace(/<li[^>]*>/gi, "- ")
