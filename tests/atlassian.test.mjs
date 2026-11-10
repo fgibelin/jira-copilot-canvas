@@ -277,6 +277,12 @@ describe("adfToMarkdown", () => {
         assert.equal(adfToMarkdown(adf(table)), "| A | B |\n| --- | --- |\n| 1 | 2 \\| x |");
     });
 
+    it("escapes backslashes as well as pipes in table cells", () => {
+        const cell = (value) => ({ type: "tableCell", content: [paragraph(text(value))] });
+        const table = { type: "table", content: [{ type: "tableRow", content: [cell("a\\|b\\")] }] };
+        assert.equal(adfToMarkdown(adf(table)), "| a\\\\\\|b\\\\ |\n| --- |");
+    });
+
     it("converts inline nodes", () => {
         const timestamp = Date.UTC(2026, 10, 9);
         const doc = adf(paragraph({ type: "mention", attrs: { text: "@Alice" } }, text(" "), { type: "status", attrs: { text: "DONE" } }, text(" "), { type: "date", attrs: { timestamp: String(timestamp) } }, { type: "hardBreak" }, { type: "inlineCard", attrs: { url: "https://example.com/c" } }, { type: "emoji", attrs: { text: ":)" } }));
