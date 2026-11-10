@@ -344,14 +344,16 @@ export const adfToMarkdown = (doc) => adfBlocks(isObject(doc) && doc.type === "d
 
 const ENTITIES = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&nbsp;": " " };
 
+const stripScriptsAndStyles = (html) => html.replace(/<(script|style)\b[^>]*(?:>[\s\S]*?(?:<\/\1\s*>|$)|$)/gi, "");
+
 export function htmlToText(html) {
-    return str(html)
-        .replace(/<(script|style)[\s\S]*?<\/\1>/gi, "")
+    const text = stripScriptsAndStyles(str(html))
         .replace(/<br\s*\/?>/gi, "\n")
         .replace(/<\/(p|div|h[1-6]|li|tr|pre|blockquote)>/gi, "\n\n")
         .replace(/<li[^>]*>/gi, "- ")
         .replace(/<[^>]+>/g, "")
-        .replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, (entity) => ENTITIES[entity])
+        .replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, (entity) => ENTITIES[entity]);
+    return stripScriptsAndStyles(text)
         .replace(/\n{3,}/g, "\n\n")
         .trim();
 }

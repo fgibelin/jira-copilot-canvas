@@ -294,6 +294,8 @@ describe("adfToMarkdown", () => {
 describe("htmlToText and bodyText", () => {
     it("removes tags, scripts and styles and decodes the common entities", () => {
         assert.equal(htmlToText("<style>p{}</style><script>alert(1)</script><p>a &amp; b</p><p>&lt;b&gt; &quot;q&quot; &#39;s&#39;</p>"), `a & b\n\n<b> "q" 's'`);
+        assert.equal(htmlToText("&lt;script&gt;alert(1)&lt;/script&gt;safe"), "safe");
+        assert.equal(htmlToText("&lt;script&gt;alert(1)"), "");
         assert.equal(htmlToText("one<br>two<br/>three"), "one\ntwo\nthree");
         assert.equal(htmlToText("<ul><li>a</li><li>b</li></ul>"), "- a\n\n- b");
     });
