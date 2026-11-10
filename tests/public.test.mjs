@@ -21,6 +21,7 @@ const modules = Object.fromEntries(
 );
 const names = Object.keys(modules);
 const isFile = (file) => stat(file).then((info) => info.isFile(), () => false);
+const SCRIPT = /<script\b([^>]*)>([\s\S]*?)<\/script(?=[\t\n\f\r />])[^>]*>/gi;
 
 // "a, b as c" -> [{ name: "a", alias: "a" }, { name: "b", alias: "c" }]
 const specifiers = (list) =>
@@ -147,12 +148,20 @@ describe("what the page may do with Jira content", () => {
 
 describe("index.html", () => {
     test("loads one module script from a file, with no inline script or event handler", () => {
-        const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
+        const scripts = [...html.matchAll(SCRIPT)];
         assert.equal(scripts.length, 1);
         assert.match(scripts[0][1], /\btype="module"/);
         assert.match(scripts[0][1], /\bsrc="\/js\/app\.js"/);
         assert.equal(scripts[0][2].trim(), "");
         assert.doesNotMatch(html, /<[^>]+\son[a-z]+\s*=/i);
+    });
+
+    test("recognizes browser-accepted script closing-tag variants", () => {
+        for (const closingTag of ["</script >", "</script data-test>", "</script/>", "</SCRIPT >"]) {
+            const scripts = [...`<script>inline${closingTag}`.matchAll(SCRIPT)];
+            assert.equal(scripts.length, 1, closingTag);
+            assert.equal(scripts[0][2].trim(), "inline", closingTag);
+        }
     });
 
     test("refers only to files that exist", async () => {
